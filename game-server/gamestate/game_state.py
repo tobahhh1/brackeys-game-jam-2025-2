@@ -1,27 +1,52 @@
 from dataclasses import dataclass
+protected: bool = False
 
-@dataclass
-class Card:
+@dataclass(eq=True, frozen=True)
+class Card():
+    suit: int
+    rank: int
+    protected: bool = False
+
+@dataclass(eq=True, frozen=True)
+class NotProtectableCard:
     suit: int
     rank: int
 
-@dataclass
-class Deck:
-    cards: set[Card]
+@dataclass(eq=True, frozen=True)
+class Deck():
+    cards: frozenset[NotProtectableCard]
+    protected: bool = False
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class Hand:
-    cards: list[Card]
+    cards: tuple[Card]
+    protected: bool = False
 
-@dataclass
+@dataclass(eq=True, frozen=True)
+class DiscardPile():
+    cards: tuple[Card]
+    protected: bool = False
+
+@dataclass(eq=True, frozen=True)
+class Wager():
+    amount: float
+    protected: bool = False
+
+
+@dataclass(eq=True, frozen=True)
+class Stack:
+    value: float
+
+@dataclass(eq=True, frozen=True)
 class Player:
     id: str
     hand: Hand
-    discard_pile: list[Card]
-    wager: float
-    stack_value: float
+    discard_pile: DiscardPile
+    stack: Stack
+    wager: Wager
+    eliminated: bool = False
 
-@dataclass
+@dataclass(eq=True, frozen=True)
 class GameState:
-    players: list[Player]
+    players: tuple[Player]
     deck: Deck
