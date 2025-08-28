@@ -1,0 +1,8 @@
+game:
+  num_suits: 4
+  num_ranks: 13
+  start_hand_size: 2
+  max_hand_size: 5
+  initial_stack: 1000
+  blind: 100
+  yield_per_wager_steal: 25

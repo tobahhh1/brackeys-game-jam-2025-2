@@ -19,12 +19,12 @@ class Deck():
 
 @dataclass(eq=True, frozen=True)
 class Hand:
-    cards: tuple[Card]
+    cards: tuple[Card, ...]
     protected: bool = False
 
 @dataclass(eq=True, frozen=True)
 class DiscardPile():
-    cards: tuple[Card]
+    cards: tuple[Card, ...]
     protected: bool = False
 
 @dataclass(eq=True, frozen=True)
@@ -48,5 +48,5 @@ class Player:
 
 @dataclass(eq=True, frozen=True)
 class GameState:
-    players: tuple[Player]
+    players: tuple[Player, ...]
     deck: Deck

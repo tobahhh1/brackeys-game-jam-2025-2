@@ -43,4 +43,4 @@ PlayerAction = TakeAction | ProtectAction | DiscardAction
 
 @dataclass(eq=True)
 class GameAction:
-    player_actions: tuple[tuple[str, PlayerAction]]
+    player_actions: tuple[tuple[str, PlayerAction], ...]

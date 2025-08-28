@@ -1,9 +1,13 @@
 from dataclasses import replace
 from gamestate.game_action import GameAction, ProtectAction, TakeAction, DiscardAction
 from gamestate.game_state import GameState
+import random
 
+def perform_random_action(state: GameState, action: GameAction) -> GameState:
+    possible_results = get_possible_results(state, action)
+    return random.choice(list(possible_results))
 
-def perform_action(state: GameState, action: GameAction) -> set[GameState]:
+def get_possible_results(state: GameState, action: GameAction) -> set[GameState]:
     """Returns a set of all possible next game states after performing the given action on the given state."""
     current_possible_gamestates = set()
     # Perform protect actions first
@@ -30,6 +34,8 @@ def perform_action(state: GameState, action: GameAction) -> set[GameState]:
         if player_action.type == "discard":
             for state in current_possible_gamestates.copy():
                 current_possible_gamestates.update(perform_discard(state, player_id, player_action))
+
+    assert len(current_possible_gamestates) > 0, "Impossible action for state"
 
     return {clear_protections(s) for s in current_possible_gamestates}
 
