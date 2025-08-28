@@ -31,7 +31,6 @@ def perform_action(state: GameState, action: GameAction) -> set[GameState]:
             for state in current_possible_gamestates.copy():
                 current_possible_gamestates.update(perform_discard(state, player_id, player_action))
 
-                
     return {clear_protections(s) for s in current_possible_gamestates}
 
 def clear_protections(state: GameState) -> GameState:
