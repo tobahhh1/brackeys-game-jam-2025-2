@@ -1,4 +1,4 @@
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, replace, asdict
 from typing import Literal
 from fastapi import FastAPI
 from starlette.responses import JSONResponse
@@ -45,12 +45,17 @@ async def event_generator(player_id: str):
         data = await queue.get()
         yield f"data: {data}\n\n"
 
+@app.post("/api/v1/player")
+def create_player():
+    player_id = str(uuid.uuid4())
+    return JSONResponse(content={"player_id": player_id})
+
 @app.post("/api/v1/player/{player_id}/game/create")
 def create_game(player_id: str):
     game_id = str(uuid.uuid4())
     game_state = create_initial_state(game_config)
     game_state = deal_player_into_game(game_state, player_id, game_config)
-    return JSONResponse(content={"game_id": game_id, "state": game_state})
+    return JSONResponse(content={"game_id": game_id, "state": asdict(game_state)})
 
 @app.post("/api/v1/player/{player_id}/game/{game_id}/join")
 def join_game(player_id: str, game_id: str):
@@ -65,7 +70,7 @@ def join_game(player_id: str, game_id: str):
                 asyncio.create_task(player_id_to_event_queue[player.id].put(
                     PlayerJoinedEvent(game_id=game_id, player_id=player_id)
                 ))
-        return JSONResponse(content={"game_id": game_id, "state": new_state})
+        return JSONResponse(content={"game_id": game_id, "state": asdict(new_state)})
     except ValueError as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
 
@@ -75,14 +80,14 @@ async def get_events(player_id: str):
 
 @app.get("/api/v1/player/{player_id}/actions")
 def get_actions(player_id: str, state: GameState):
-    return JSONResponse(content=list(get_legal_actions(state, player_id, game_config)))
+    return JSONResponse(content=list(asdict(x) for x in get_legal_actions(state, player_id, game_config)))
 
 @app.get("/api/v1/game/{game_id}")
 def get_game_state(game_id: str):
     game_state = game_id_to_state.get(game_id)
     if game_state is None:
         return JSONResponse(content={"error": "Game not found"}, status_code=404)
-    return JSONResponse(content=game_state)
+    return JSONResponse(content=asdict(game_state))
 
 
 @app.post("/api/v1/player/{player_id}/game/{game_id}/action")

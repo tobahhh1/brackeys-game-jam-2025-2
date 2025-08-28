@@ -8,6 +8,6 @@ class GameConfig:
     initial_hand_size: int = 2  
     max_hand_size: int = 5
     initial_stack: float = 20
-    initial_wager: float = 4
+    blind: float = 4
     wager_steal: float = 1
 

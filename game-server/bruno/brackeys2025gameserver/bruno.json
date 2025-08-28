@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "brackeys2025gameserver",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

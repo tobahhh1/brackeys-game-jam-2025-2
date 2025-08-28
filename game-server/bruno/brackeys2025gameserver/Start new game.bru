@@ -1,0 +1,15 @@
+meta {
+  name: Start new game
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseurl}}/api/v1/player/{{playerid}}/game/create
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

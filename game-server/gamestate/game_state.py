@@ -14,7 +14,7 @@ class NotProtectableCard:
 
 @dataclass(eq=True, frozen=True)
 class Deck():
-    cards: frozenset[NotProtectableCard]
+    cards: tuple[NotProtectableCard, ...]
     protected: bool = False
 
 @dataclass(eq=True, frozen=True)

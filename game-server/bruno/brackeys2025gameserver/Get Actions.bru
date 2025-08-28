@@ -1,0 +1,15 @@
+meta {
+  name: Get Actions
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseurl}}/api/v1/player/{{playerid}}/actions
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}
