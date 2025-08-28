@@ -7,7 +7,7 @@ def perform_action(state: GameState, action: GameAction) -> set[GameState]:
     """Returns a set of all possible next game states after performing the given action on the given state."""
     current_possible_gamestates = set()
     # Perform protect actions first
-    for player_id, player_action in action.player_id_to_action.items():
+    for (player_id, player_action) in action.player_actions:
         if player_action.type == "protect":
             current_possible_gamestates.update(perform_protect(state, player_id, player_action))
     # If there were no protect actions, then the only possible state is the original state.
@@ -15,7 +15,7 @@ def perform_action(state: GameState, action: GameAction) -> set[GameState]:
     if len(current_possible_gamestates) == 0:
         current_possible_gamestates.add(state)
     # Then perform take actions, punishing players who tried to take protected objects
-    for player_id, player_action in action.player_id_to_action.items():
+    for (player_id, player_action) in action.player_actions:
         if player_action.type == "take":
             for state in current_possible_gamestates.copy():
                 current_possible_gamestates.update(perform_take(state, player_id, player_action))
@@ -26,7 +26,7 @@ def perform_action(state: GameState, action: GameAction) -> set[GameState]:
         current_possible_gamestates.add(state)
 
     # Then discard actions. Doing this after take actions prevents players from taking discarded cards.
-    for player_id, player_action in action.player_id_to_action.items():
+    for (player_id, player_action) in action.player_actions:
         if player_action.type == "discard":
             for state in current_possible_gamestates.copy():
                 current_possible_gamestates.update(perform_discard(state, player_id, player_action))

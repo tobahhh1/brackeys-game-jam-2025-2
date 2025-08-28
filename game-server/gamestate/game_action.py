@@ -43,4 +43,4 @@ PlayerAction = TakeAction | ProtectAction | DiscardAction
 
 @dataclass(eq=True)
 class GameAction:
-    player_id_to_action: dict[str, PlayerAction]
+    player_actions: tuple[tuple[str, PlayerAction]]
