@@ -1,6 +1,8 @@
 import { forwardRef, useEffect, useLayoutEffect, useRef } from 'react';
 import StartGame from './game/main';
 import { EventBus } from './game/EventBus';
+import { useNavigate, useParams } from 'react-router-dom';
+import { apiClient } from './api/client';
 
 export interface IRefPhaserGame {
     game: Phaser.Game | null;
@@ -13,6 +15,9 @@ interface IProps {
 
 export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(function PhaserGame({ onSceneReady: onSceneReady }, ref) {
     const game = useRef<Phaser.Game | null>(null!);
+
+    const navigate = useNavigate();
+    const params = useParams();
 
     useLayoutEffect(() => {
         if (game.current === null) {
@@ -56,6 +61,19 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(function PhaserGame
             EventBus.removeListener('current-scene-ready');
         }
     }, [onSceneReady, ref]);
+
+    useEffect(() => {
+        EventBus.on('scene-created', (scene_instance: Phaser.Scene) => {
+            if ("injectedSceneProperties" in scene_instance) {
+                scene_instance.injectedSceneProperties = {
+                    api_client: apiClient,
+                    navigate: navigate,
+                    game_id: params.game_id!,
+                    player_id: params.player_id!,
+                }
+            }
+        })
+    })
 
     return (
         <div id="game-container"></div>

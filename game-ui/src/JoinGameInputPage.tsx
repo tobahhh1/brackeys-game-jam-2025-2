@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { IApiClient } from "./api/client";
-import { createPlayer } from "./api/api";
 
 interface JoinGameProps {
     navigate(url: string): void;
@@ -15,8 +14,7 @@ export const JoinGameInputPage = (props: JoinGameProps) => {
 
     const handleJoinGame = async () => {
         setLoading(true);
-        const player_id = (await createPlayer(props.apiClient)).player_id;
-        props.navigate(`/players/${player_id}/games/${gameCode}`);
+        props.navigate(`/games/${gameCode}`);
     }
 
     return (
