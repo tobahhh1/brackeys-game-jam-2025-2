@@ -7,7 +7,7 @@ class Card():
     protected: bool = False
     # If the card has been removed from the hand in the middle of processing a turn.
     # Not exposed to the user of the class, only for internal use.
-    _gone: bool = field(default=False, compare=False, repr=False, hash=False)
+    _gone: bool = field(default=False)
 
 @dataclass(eq=True, frozen=True)
 class NotProtectableCard:

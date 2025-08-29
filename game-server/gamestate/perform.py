@@ -9,31 +9,31 @@ def perform_random_action(state: GameState, action: GameAction) -> GameState:
 
 def get_possible_results(state: GameState, action: GameAction) -> set[GameState]:
     """Returns a set of all possible next game states after performing the given action on the given state."""
-    current_possible_gamestates = set()
+    print(action)
+    current_possible_gamestates = {state}
     # Perform protect actions first
     for (player_id, player_action) in action.player_actions:
         if player_action.type == "protect":
-            current_possible_gamestates.update(perform_protect(state, player_id, player_action))
-    # If there were no protect actions, then the only possible state is the original state.
-    # If there was a protect action, then the original state is not a possible state anymore.
-    if len(current_possible_gamestates) == 0:
-        current_possible_gamestates.add(state)
+            new_current_possible_gamestates = set()
+            for state in current_possible_gamestates:
+                new_current_possible_gamestates.update(perform_protect(state, player_id, player_action))
+            current_possible_gamestates = new_current_possible_gamestates
+
     # Then perform take actions, punishing players who tried to take protected objects
     for (player_id, player_action) in action.player_actions:
         if player_action.type == "take":
-            for state in current_possible_gamestates.copy():
-                current_possible_gamestates.update(perform_take(state, player_id, player_action))
-
-    # If there were no take actions, then the only possible state is the original state.
-    # If there was a take action, then the original state is not a possible state anymore.
-    if len(current_possible_gamestates) == 0:
-        current_possible_gamestates.add(state)
+            new_current_possible_gamestates = set()
+            for state in current_possible_gamestates:
+                new_current_possible_gamestates.update(perform_take(state, player_id, player_action))
+            current_possible_gamestates = new_current_possible_gamestates
 
     # Then discard actions. Doing this after take actions prevents players from taking discarded cards.
     for (player_id, player_action) in action.player_actions:
         if player_action.type == "discard":
-            for state in current_possible_gamestates.copy():
-                current_possible_gamestates.update(perform_discard(state, player_id, player_action))
+            new_current_possible_gamestates = set()
+            for state in current_possible_gamestates:
+                new_current_possible_gamestates.update(perform_discard(state, player_id, player_action))
+            current_possible_gamestates = new_current_possible_gamestates
 
     assert len(current_possible_gamestates) > 0, "Impossible action for state"
 
@@ -151,7 +151,8 @@ def perform_take(state: GameState, player_id: str, action: TakeAction) -> set[Ga
         if target_player.hand.protected or target_player.hand.cards[action.object_to_take.card_order].protected:
             return {eliminate_player(state, player_id)}
         if target_player.hand.cards[action.object_to_take.card_order]._gone:
-            raise ValueError(f"Player {target_player.id}'s card at order {action.object_to_take.card_order} has already been taken or discarded")
+            # Other player already discarded this card
+            return {state}
         return {
             replace(state,
                 players=tuple(
@@ -173,7 +174,6 @@ def perform_take(state: GameState, player_id: str, action: TakeAction) -> set[Ga
                                 if not i == action.object_to_take.card_order
                                 else replace(c, _gone=True)
                                 for i, c in enumerate(p.hand.cards)
-
                             )
                         )
                     ) 
@@ -239,6 +239,9 @@ def perform_discard(state: GameState, player_id: str, action: DiscardAction) -> 
     if action.card_order < 0 or action.card_order >= len(player.hand.cards):
         raise ValueError(f"Player {player.id} does not have a card at order {action.card_order} to discard")
     card_to_discard = player.hand.cards[action.card_order]
+    # Other player already took this card
+    if card_to_discard._gone:
+        return {state}
     next_state = replace(state,
         players=tuple(
             replace(p,
@@ -249,7 +252,6 @@ def perform_discard(state: GameState, player_id: str, action: DiscardAction) -> 
                         if not i == action.card_order
                         else replace(c, _gone=True)
                         for i, c in enumerate(p.hand.cards)
-
                     )
                 ),
                 discard_pile=replace(p.discard_pile, 
