@@ -58,15 +58,11 @@ export class Game extends Scene {
         deck?: GameObject
         poisonVial?: GameObject
         cards?: GameObject[]
-        leftHand?: GameObject
-        rightHand?: GameObject
         discardPile?: GameObject
         wager?: GameObject
 
         opponentPoisonVial?: GameObject
         opponentCards?: GameObject[]
-        opponentLeftHand?: GameObject
-        opponentRightHand?: GameObject
         opponentDiscardPile?: GameObject
         opponentWager?: GameObject
         opponentFace?: GameObject
@@ -184,16 +180,6 @@ export class Game extends Scene {
                 center(this.thisPlayerBound).y,
                 Images.poison_vial.key
             )
-            this.gameObjects.leftHand = this.add.image(
-                this.thisPlayerBound.left + 250,
-                center(this.thisPlayerBound).y,
-                Images.hand.key
-            ).setScale(2)
-            this.gameObjects.rightHand = this.add.image(
-                this.thisPlayerBound.right - 250,
-                center(this.thisPlayerBound).y,
-                Images.hand.key
-            ).setScale(2)
         }
 
         if (this.getOpponentPlayerState(state)) {
@@ -215,24 +201,21 @@ export class Game extends Scene {
                 Images.poison_vial.key
             ).setScale(0.5)
 
-
-            this.gameObjects.opponentLeftHand = this.add.image(
-                this.opponentPlayerBound.right - 300,
-                center(this.opponentPlayerBound).y + boundHeight(this.opponentPlayerBound) * 0.33,
-                Images.hand.key
-            )
-
-            this.gameObjects.opponentRightHand = this.add.image(
-                this.opponentPlayerBound.left + 300,
-                center(this.opponentPlayerBound).y + boundHeight(this.opponentPlayerBound) * 0.33,
-                Images.hand.key
-            )
-
             this.gameObjects.opponentFace = this.add.image(
                 center(this.opponentPlayerBound).x,
                 center(this.opponentPlayerBound).y - boundHeight(this.opponentPlayerBound) * 0.2,
                 Images.bandit.key
             ).setScale(1.25)
+        } else {
+            this.add.text(
+                center(this.opponentPlayerBound).x,
+                center(this.opponentPlayerBound).y,
+                `Send this game code to your friend!: ${this.injectedSceneProperties.game_id}`,
+                {
+                    font: '32px Arial',
+                    color: 'black'
+                }
+            ).setOrigin(0.5, 0.5);
         }
 
         if (this.getThisPlayerState(state)?.hand?.cards) {
@@ -261,7 +244,7 @@ export class Game extends Scene {
             const hand = this.getOpponentPlayerState(state)?.hand;
             if (hand) {
                 const cardCount = hand.cards.length;
-                const spacing = Math.min(100, boundWidth(this.opponentPlayerBound) / (cardCount + 1));
+                const spacing = Math.min(75, boundWidth(this.opponentPlayerBound) / (cardCount + 1));
                 const startX = center(this.opponentPlayerBound).x - (spacing * (cardCount - 1)) / 2;
                 for (let i = 0; i < cardCount; i++) {
                     const card = FaceDownCard(

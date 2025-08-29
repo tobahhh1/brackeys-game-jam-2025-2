@@ -5,7 +5,7 @@ export const FaceUpCard = (scene: Phaser.Scene, x: number, y: number, image: Ima
     const cardImage = scene.add.image(0, 0, image.key);
     const cardText = scene.add.text(0, 0, face_text, {
         fontFamily: 'Arial',
-        fontSize: '24px',
+        fontSize: '100px',
         color: face_color,
         align: 'center',
         wordWrap: { width: 100 }
