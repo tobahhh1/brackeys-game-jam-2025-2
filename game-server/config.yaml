@@ -1,6 +1,6 @@
 game:
-  num_suits: 4
-  num_ranks: 13
+  num_suits: 2
+  num_ranks: 9
   initial_hand_size: 2
   max_hand_size: 5
   initial_stack: 20

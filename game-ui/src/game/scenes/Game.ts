@@ -308,14 +308,27 @@ export class Game extends Scene {
                 const spacing = Math.min(75, boundWidth(this.opponentPlayerBound) / (cardCount + 1));
                 const startX = center(this.opponentPlayerBound).x - (spacing * (cardCount - 1)) / 2;
                 for (let i = 0; i < cardCount; i++) {
-                    const card = FaceDownCard(
-                        this,
-                        startX + i * spacing,
-                        this.opponentPlayerBound.top + 100,
-                        Images.card_back,
-                        this.clickableEventHandlers
-                    )
-                    this.gameObjects.opponentCards.push(card);
+                    if (this.gameState.deck?.cards?.length !== 0) {
+                        const card = FaceDownCard(
+                            this,
+                            startX + i * spacing,
+                            this.opponentPlayerBound.top + 100,
+                            Images.card_back,
+                            this.clickableEventHandlers
+                        )
+                        this.gameObjects.opponentCards.push(card);
+                    } else {
+                        const card = FaceUpCard(
+                            this,
+                            startX + i * spacing,
+                            this.opponentPlayerBound.top + 100,
+                            Images.card_front,
+                            hand.cards[i].rank.toString(),
+                            this.suitToColor(hand.cards[i].suit),
+                            this.clickableEventHandlers
+                        )
+                        this.gameObjects.opponentCards.push(card);
+                    }
                 }
             }
         }
@@ -418,11 +431,19 @@ export class Game extends Scene {
                 return;
             }
 
+
             if (this.gameState.players && this.gameState.players.length < 2) {
                 this.waiting = true;
             }
             this.destroyOldGameObjects();
             this.renderGameState(new_state);
+
+            if (this.gameState.deck?.cards?.length === 0) {
+                const thisPlayerHand = this.getThisPlayerState(new_state)?.hand?.cards.map(c => [c.rank, c.suit] as [number, number]) || [];
+                const opponentPlayerHand = this.getOpponentPlayerState(new_state)?.hand?.cards.map(c => [c.rank, c.suit] as [number, number]) || [];
+                const output = compareHandsWithMessage(thisPlayerHand, opponentPlayerHand)
+                alert(output.message)
+            }
         });
         EventBus.on('legal-actions-updated', (legal_actions: IPlayerAction[]) => {
             this.legalActions = legal_actions;
