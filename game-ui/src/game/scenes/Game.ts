@@ -2,7 +2,7 @@ import { Scene } from 'phaser';
 import { EventBus } from '../EventBus';
 import GameObject = Phaser.GameObjects.GameObject;
 import { IInjectedSceneProperties } from './injectedSceneProperties';
-import { IGameState } from '../../state/state';
+import { IGameState, IPlayerAction } from '../../state/state';
 import { ImageAsset } from '../data/image';
 import { FaceUpCard } from '../objects/face_up_card';
 import { FaceDownCard } from '../objects/face_down_card';
@@ -71,6 +71,7 @@ export class Game extends Scene {
     // Injected by App.tsx when scene is ready
     injectedSceneProperties: IInjectedSceneProperties
 
+    legalActions: IPlayerAction[] = []
 
     thisPlayerBound: IBound
     opponentPlayerBound: IBound
@@ -152,6 +153,27 @@ export class Game extends Scene {
         }
     }
 
+    findCardOrderAndPlayerId(card: any): [string, number] {
+        const state = (this.injectedSceneProperties as any).currentGameState as IGameState;
+        for (const player of state.players) {
+            let hand;
+            if (player.id === this.injectedSceneProperties.player_id) {
+                hand = this.gameObjects.cards;
+            } else {
+                hand = this.gameObjects.opponentCards;
+            }
+            if (!hand) {
+                continue;
+            }
+            const index = hand.findIndex(c => c === card);
+            if (index !== -1) {
+                return [player.id, index];
+            }
+        }
+        return ['', -1];
+    }
+
+
     renderGameState(state: IGameState) {
         // 0 being falsy is intentional here
         if (state.deck?.cards?.length) {
@@ -195,11 +217,6 @@ export class Game extends Scene {
                     this.suitToColor(card.suit)
                 )
             }
-            this.gameObjects.opponentPoisonVial = this.add.image(
-                this.opponentPlayerBound.right - 100,
-                center(this.opponentPlayerBound).y + boundHeight(this.opponentPlayerBound) * 0.33,
-                Images.poison_vial.key
-            ).setScale(0.5)
 
             this.gameObjects.opponentFace = this.add.image(
                 center(this.opponentPlayerBound).x,
@@ -266,7 +283,9 @@ export class Game extends Scene {
             this.destroyOldGameObjects();
             this.renderGameState(new_state);
         });
+        EventBus.on('legal-actions-updated', (legal_actions: IPlayerAction[]) => {
+            this.legalActions = legal_actions;
+        });
         EventBus.emit('current-scene-ready', this);
     }
-
 }

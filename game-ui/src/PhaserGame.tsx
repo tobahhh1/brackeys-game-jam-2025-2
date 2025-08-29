@@ -73,7 +73,7 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(function PhaserGame
                 }
             }
         })
-    })
+    }, [])
 
     return (
         <div id="game-container"></div>

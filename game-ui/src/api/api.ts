@@ -52,11 +52,9 @@ export async function getGameState(apiClient: IApiClient, gameId: string): Promi
     return res.json();
 }
 
-export async function getActions(apiClient: IApiClient, playerId: string, state: IGameState): Promise<IPlayerAction[]> {
-    const res = await fetch(`${apiClient.baseUrl}/players/${playerId}/actions`, {
+export async function getActions(apiClient: IApiClient, playerId: string, gameId: string): Promise<IPlayerAction[]> {
+    const res = await fetch(`${apiClient.baseUrl}/players/${playerId}/games/${gameId}/actions`, {
         method: "GET",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(state),
     });
     return res.json();
 }
