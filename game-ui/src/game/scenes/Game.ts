@@ -85,11 +85,13 @@ export class Game extends Scene {
     neutralAreaBound: IBound
 
     poisonMode: boolean = false;
+    waiting: boolean = false;
 
+    submittedActionGameObject: IHasImage | null = null;
 
     clickableEventHandlers = {
         "pointerover": this.handleHover.bind(this),
-        "pointerout": (obj: IHasImage) => { obj.image.clearTint(); },
+        "pointerout": (obj: IHasImage) => { !this.waiting && obj.image.clearTint(); },
         "pointerdown": this.handleClick.bind(this)
     }
 
@@ -321,6 +323,9 @@ export class Game extends Scene {
 
     // utility, tells objects to only be highlightable if they map to a legal action
     handleHover(obj: IHasImage) {
+        if (this.waiting) {
+            return
+        }
         if (this.mapToAction(obj)) {
             if (this.poisonMode) {
                 // green hue
@@ -333,11 +338,20 @@ export class Game extends Scene {
         }
     }
 
-    async handleClick(obj: any) {
+    async handleClick(obj: IHasImage) {
+        if (this.waiting) {
+            return
+        }
         const action = this.mapToAction(obj);
         if (action) {
-            this.setWaiting(true)
+            this.waiting = true;
             console.log("Performing action:", action);
+            if (this.poisonMode) {
+                obj.image.setTint(0x0F8E01)
+            } else {
+                obj.image.setTint(0x999900)
+            }
+            this.submittedActionGameObject = obj;
             performAction(
                 this.injectedSceneProperties.api_client,
                 this.injectedSceneProperties.player_id!,
@@ -345,30 +359,6 @@ export class Game extends Scene {
                 action
             );
         }
-    }
-
-    setWaiting(waiting: boolean) {
-        (waiting as any) = !!waiting;
-        // for (const obj of Object.values(this.gameObjects)) {
-        //     if (obj) {
-        //         if (Array.isArray(obj)) {
-        //             for (const o of obj) {
-        //                 if (waiting) {
-        //                     o.disableInteractive()
-        //                 } else {
-        //                     o.setInteractive()
-        //                 }
-        //             }
-        //         }
-        //         else {
-        //             if (waiting) {
-        //                 obj.disableInteractive();
-        //             } else {
-        //                 obj.setInteractive();
-        //             }
-        //         }
-        //     }
-        // }
     }
 
     mapToAction(gameObject: any): IPlayerAction | null {
@@ -422,13 +412,33 @@ export class Game extends Scene {
                 return;
 
             }
+            if (this.getOpponentPlayerState(new_state)?.eliminated) {
+                alert("Yay! Your opponent tried to take the thing you poisoned! You win!");
+                this.injectedSceneProperties.navigate("/");
+                return;
+            }
+
+            if (this.gameState.players && this.gameState.players.length < 2) {
+                this.waiting = true;
+            }
             this.destroyOldGameObjects();
             this.renderGameState(new_state);
-            this.setWaiting(new_state.players.length !== 2);
         });
         EventBus.on('legal-actions-updated', (legal_actions: IPlayerAction[]) => {
             this.legalActions = legal_actions;
         });
+        EventBus.on('player_joined', (_: any) => {
+            console.log("Player joined event received");
+            if (this.gameState.players?.length === 2) {
+                this.waiting = false;
+            }
+        })
+        EventBus.on('actions_performed', (_: any) => {
+            console.log("Actions performed event received");
+            this.submittedActionGameObject?.image.clearTint();
+            this.submittedActionGameObject = null;
+            this.waiting = false;
+        })
         EventBus.emit('current-scene-ready', this);
     }
 }

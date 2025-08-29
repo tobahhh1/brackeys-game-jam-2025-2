@@ -56,7 +56,8 @@ function App() {
 
         const events = await getEvents(apiClient, scene_properties.player_id);
         events.addEventListener('message', async (event) => {
-            console.debug("Received event:", event.data);
+            const data = JSON.parse(event.data);
+            console.debug("Received event:", data);
 
             // Fetch the updated game state
             let updated_game_state = await getGameState(apiClient, scene_properties.game_id)
@@ -79,6 +80,7 @@ function App() {
             console.debug("Fetched updated legal actions:", updated_legal_actions);
             EventBus.emit('game-state-updated', updated_game_state.state);
             EventBus.emit('legal-actions-updated', updated_legal_actions);
+            EventBus.emit(data.type, data)
         })
     }
 

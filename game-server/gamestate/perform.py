@@ -119,11 +119,17 @@ def find_player(state: GameState, player_id: str):
     return player
 
 def eliminate_player(state: GameState, player_id: str) -> GameState:
-    next_state = replace(state)
-    replace(find_player(next_state, player_id), eliminated= True)
+    next_state = replace(
+        state, 
+        players=tuple(
+            replace(p, eliminated=True) if p.id == player_id else p for p in state.players
+        )
+    )
     return next_state
 
 def perform_take(state: GameState, player_id: str, action: TakeAction) -> set[GameState]:
+    if find_player(state, player_id).eliminated:
+        return {state}
     if action.object_to_take.type == "deck": 
         if state.deck.protected:
             return {eliminate_player(state, player_id)}
@@ -236,6 +242,8 @@ def perform_take(state: GameState, player_id: str, action: TakeAction) -> set[Ga
 
 def perform_discard(state: GameState, player_id: str, action: DiscardAction) -> set[GameState]:
     player = find_player(state, player_id)
+    if (player.eliminated):
+        return {state}
     if action.card_order < 0 or action.card_order >= len(player.hand.cards):
         raise ValueError(f"Player {player.id} does not have a card at order {action.card_order} to discard")
     card_to_discard = player.hand.cards[action.card_order]

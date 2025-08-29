@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
+import json
 import asyncio
 import uuid
 import yaml
@@ -55,7 +56,7 @@ async def event_generator(player_id: str):
     queue = player_id_to_event_queue[player_id]
     while True:
         data = await queue.get()
-        yield f"data: {data}\n\n"
+        yield f"{json.dumps(asdict(data))}\n\n"
 
 @app.post("/api/v1/players")
 def create_player():
