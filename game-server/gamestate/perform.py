@@ -1,6 +1,6 @@
 from dataclasses import replace
 from gamestate.game_action import GameAction, ProtectAction, TakeAction, DiscardAction
-from gamestate.game_state import GameState
+from gamestate.game_state import Card, GameState
 import random
 
 def perform_random_action(state: GameState, action: GameAction) -> GameState:
@@ -37,14 +37,14 @@ def get_possible_results(state: GameState, action: GameAction) -> set[GameState]
 
     assert len(current_possible_gamestates) > 0, "Impossible action for state"
 
-    return {clear_protections(s) for s in current_possible_gamestates}
+    return {clear_temporary_flags(s) for s in current_possible_gamestates}
 
-def clear_protections(state: GameState) -> GameState:
+def clear_temporary_flags(state: GameState) -> GameState:
     return replace(state,
         deck=replace(state.deck, protected=False),
         players=tuple(
             replace(p,
-                hand=replace(p.hand, protected=False, cards=tuple(replace(c, protected=False) for c in p.hand.cards)),
+                hand=replace(p.hand, protected=False, cards=tuple(replace(c, protected=False) for c in p.hand.cards if not c._gone)),
                 discard_pile=replace(p.discard_pile, protected=False),
                 wager=replace(p.wager, protected=False)
             )
@@ -132,7 +132,17 @@ def perform_take(state: GameState, player_id: str, action: TakeAction) -> set[Ga
         result = set()
         for card in state.deck.cards:
             next_state = replace(state, 
-                deck=replace(state.deck, cards=frozenset(c for c in state.deck.cards if c != card))
+                deck=replace(state.deck, cards=tuple(c for c in state.deck.cards if c != card)),
+                players=tuple(
+                    replace(p,
+                        hand=replace(p.hand,
+                                    cards
+                                     =  p.hand.cards
+                                     + (Card(suit=card.suit, rank=card.rank),)) 
+                    ) 
+                    if p.id == player_id else p
+                    for p in state.players
+                )
             )
             result.add(next_state)
         return result
@@ -140,23 +150,32 @@ def perform_take(state: GameState, player_id: str, action: TakeAction) -> set[Ga
         target_player = find_player(state, action.object_to_take.player_id)
         if target_player.hand.protected or target_player.hand.cards[action.object_to_take.card_order].protected:
             return {eliminate_player(state, player_id)}
+        if target_player.hand.cards[action.object_to_take.card_order]._gone:
+            return {state} # Card has already been taken this round, so nothing happens
         return {
             replace(state,
                 players=tuple(
-                    replace(p,
-                        hand=replace(p.hand, 
-                                    cards
-                                     =  p.hand.cards
-                                     + (target_player.hand.cards[action.object_to_take.card_order],))
+                    replace(
+                        p,
+                        hand=replace(
+                            p.hand, 
+                            cards
+                             =  p.hand.cards
+                             + (target_player.hand.cards[action.object_to_take.card_order],))
                     ) 
                     if p.id == player_id else 
-                    replace(p,
-                            hand=replace(p.hand, 
-                                        cards=tuple(
-                                            c for i, c in enumerate(p.hand.cards) 
-                                            if not (p.id == target_player.id and i == action.object_to_take.card_order)
-                                        )
+                    replace(
+                        p,
+                        hand=replace(
+                            p.hand, 
+                            cards=tuple(
+                                c
+                                if not i == action.object_to_take.card_order
+                                else replace(c, _gone=True)
+                                for i, c in enumerate(p.hand.cards)
+
                             )
+                        )
                     ) 
                     if p.id == target_player.id else p
                     for p in state.players
@@ -199,12 +218,13 @@ def perform_take(state: GameState, player_id: str, action: TakeAction) -> set[Ga
                 ) 
                 if p.id == player_id else 
                 replace(p,
-                        discard_pile=replace(p.discard_pile, 
-                                    cards=tuple(
-                                        c for c in p.discard_pile.cards 
-                                        if c != card
-                                    )
+                    discard_pile=replace(
+                        p.discard_pile, 
+                        cards=tuple(
+                            c for c in p.discard_pile.cards 
+                            if c != card
                         )
+                    )
                 ) 
                 if p.id == target_player.id else p
                 for p in state.players
@@ -222,14 +242,18 @@ def perform_discard(state: GameState, player_id: str, action: DiscardAction) -> 
     next_state = replace(state,
         players=tuple(
             replace(p,
-                hand=replace(p.hand, 
-                            cards=tuple(
-                                c for i, c in enumerate(p.hand.cards) 
-                                if not (p.id == player.id and i == action.card_order)
-                            )
+                hand=replace(
+                    p.hand, 
+                    cards=tuple(
+                        c
+                        if not i == action.card_order
+                        else replace(c, _gone=True)
+                        for i, c in enumerate(p.hand.cards)
+
+                    )
                 ),
                 discard_pile=replace(p.discard_pile, 
-                            cards=(card_to_discard,) + p.discard_pile.cards # Discarded cards go on top of the pile
+                    cards=(card_to_discard,) + p.discard_pile.cards # Discarded cards go on top of the pile
                 )
             ) 
             if p.id == player.id else p

@@ -1,6 +1,7 @@
 from dataclasses import dataclass, replace, asdict
 from typing import Literal
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 from sse_starlette.sse import EventSourceResponse
 import asyncio
@@ -22,6 +23,17 @@ app = FastAPI()
 game_id_to_state: dict[str, GameState] = {}
 game_id_to_pending_action: dict[str, GameAction] = {}
 
+origins = [
+    "*"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 
 @dataclass
 class ActionPerformedEvent:
@@ -45,20 +57,21 @@ async def event_generator(player_id: str):
         data = await queue.get()
         yield f"data: {data}\n\n"
 
-@app.post("/api/v1/player")
+@app.post("/api/v1/players")
 def create_player():
-    player_id = str(uuid.uuid4())
+    player_id = str(uuid.uuid4())[:4]
     return JSONResponse(content={"player_id": player_id})
 
-@app.post("/api/v1/player/{player_id}/game/create")
+@app.post("/api/v1/players/{player_id}/games/create")
 def create_game(player_id: str):
-    game_id = str(uuid.uuid4())
+    game_id = str(uuid.uuid4())[:4]
     game_state = create_initial_state(game_config)
     game_state = deal_player_into_game(game_state, player_id, game_config)
+    game_id_to_state[game_id] = game_state
     return JSONResponse(content={"game_id": game_id, "state": asdict(game_state)})
 
-@app.post("/api/v1/player/{player_id}/game/{game_id}/join")
-def join_game(player_id: str, game_id: str):
+@app.post("/api/v1/players/{player_id}/games/{game_id}/join")
+async def join_game(player_id: str, game_id: str):
     game_state = game_id_to_state.get(game_id)
     if game_state is None:
         return JSONResponse(content={"error": "Game not found"}, status_code=404)
@@ -74,24 +87,32 @@ def join_game(player_id: str, game_id: str):
     except ValueError as e:
         return JSONResponse(content={"error": str(e)}, status_code=400)
 
-@app.get("/api/v1/player/{player_id}/events")
+@app.get("/api/v1/players/{player_id}/events")
 async def get_events(player_id: str):
     return EventSourceResponse(event_generator(player_id))
 
-@app.get("/api/v1/player/{player_id}/actions")
-def get_actions(player_id: str, state: GameState):
+@app.get("/api/v1/players/{player_id}/games/{game_id}/actions")
+def get_actions(player_id: str, game_id: str):
+    state = game_id_to_state.get(game_id)
+    if state is None:
+        return JSONResponse(content={"error": "Game not found"}, status_code=404)
+    if all(player.id != player_id for player in state.players):
+        return JSONResponse(content={"error": "Player not in game"}, status_code=400)
     return JSONResponse(content=list(asdict(x) for x in get_legal_actions(state, player_id, game_config)))
 
-@app.get("/api/v1/game/{game_id}")
+@app.get("/api/v1/games/{game_id}")
 def get_game_state(game_id: str):
     game_state = game_id_to_state.get(game_id)
     if game_state is None:
         return JSONResponse(content={"error": "Game not found"}, status_code=404)
-    return JSONResponse(content=asdict(game_state))
+    return JSONResponse(content={
+        "game_id": game_id,
+        "state": asdict(game_state)
+    })
 
 
-@app.post("/api/v1/player/{player_id}/game/{game_id}/action")
-def perform_action(player_id: str, game_id: str, action: PlayerAction):
+@app.post("/api/v1/players/{player_id}/games/{game_id}/actions")
+async def perform_action(player_id: str, game_id: str, action: PlayerAction):
     
     game_state = game_id_to_state.get(game_id)
     if game_state is None:
