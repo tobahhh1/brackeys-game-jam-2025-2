@@ -27,7 +27,7 @@ def get_legal_actions(state: GameState, player_id: str, config: GameConfig) -> s
         if other_player.id == player_id or other_player.eliminated:
             continue
         for obj in get_takeables(other_player, config):
-            if isinstance(obj, TakeableCard) and len(player.hand.cards) >= config.max_hand_size:
+            if not isinstance(obj, TakeableWager) and len(player.hand.cards) >= config.max_hand_size:
                 continue
             legal_actions.add(TakeAction(object_to_take=obj))
     for i, _ in enumerate(player.hand.cards):
