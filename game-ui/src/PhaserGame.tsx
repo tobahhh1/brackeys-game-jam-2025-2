@@ -17,6 +17,16 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(function PhaserGame
     const game = useRef<Phaser.Game | null>(null!);
 
     const navigate = useNavigate();
+
+    const handleNavigate = (path: string) => {
+        game.current?.destroy(true);
+        if (game.current !== null) {
+            game.current = null;
+        }
+        EventBus.destroy();
+        navigate(path);
+    }
+
     const params = useParams();
 
     useLayoutEffect(() => {
@@ -67,7 +77,7 @@ export const PhaserGame = forwardRef<IRefPhaserGame, IProps>(function PhaserGame
             if ("injectedSceneProperties" in scene_instance) {
                 scene_instance.injectedSceneProperties = {
                     api_client: apiClient,
-                    navigate: navigate,
+                    navigate: handleNavigate,
                     game_id: params.game_id!,
                     player_id: params.player_id!,
                 }

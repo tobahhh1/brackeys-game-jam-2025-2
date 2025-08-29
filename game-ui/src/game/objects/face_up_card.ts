@@ -21,6 +21,7 @@ export const FaceUpCard = (scene: Phaser.Scene, x: number, y: number, image: Ima
     card.add(cardText);
     card.image = cardImage;
     card.text = cardText;
+    cardImage.setInteractive()
     for (const event_name in event_map) {
         const callback = event_map[event_name];
         cardImage.on(event_name, () => {

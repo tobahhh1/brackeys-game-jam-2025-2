@@ -1,4 +1,4 @@
-import { Scene } from 'phaser';
+import { GameObjects, Scene } from 'phaser';
 import { EventBus } from '../EventBus';
 import GameObject = Phaser.GameObjects.GameObject;
 import { IInjectedSceneProperties } from './injectedSceneProperties';
@@ -6,6 +6,7 @@ import { IGameState, IPlayerAction } from '../../state/state';
 import { ImageAsset } from '../data/image';
 import { FaceUpCard } from '../objects/face_up_card';
 import { FaceDownCard } from '../objects/face_down_card';
+import { performAction } from '../../api/api';
 
 const Images = {
     background: new ImageAsset('background', 'bg.png'),
@@ -49,6 +50,10 @@ function boundHeight(bound: IBound): number {
     return bound.bottom - bound.top;
 }
 
+interface IHasImage {
+    image: GameObjects.Image
+}
+
 export class Game extends Scene {
 
     height: number = 0;
@@ -66,16 +71,27 @@ export class Game extends Scene {
         opponentDiscardPile?: GameObject
         opponentWager?: GameObject
         opponentFace?: GameObject
+        codeText?: GameObject
     } = {}
 
     // Injected by App.tsx when scene is ready
     injectedSceneProperties: IInjectedSceneProperties
 
     legalActions: IPlayerAction[] = []
+    gameState: IGameState
 
     thisPlayerBound: IBound
     opponentPlayerBound: IBound
     neutralAreaBound: IBound
+
+    poisonMode: boolean = false;
+
+
+    clickableEventHandlers = {
+        "pointerover": this.handleHover.bind(this),
+        "pointerout": (obj: IHasImage) => { obj.image.clearTint(); },
+        "pointerdown": this.handleClick.bind(this)
+    }
 
     constructor() {
         super('Game');
@@ -153,8 +169,8 @@ export class Game extends Scene {
         }
     }
 
-    findCardOrderAndPlayerId(card: any): [string, number] {
-        const state = (this.injectedSceneProperties as any).currentGameState as IGameState;
+    findCardOrderAndPlayerId(card: any): [string | null, number] {
+        const state = this.gameState;
         for (const player of state.players) {
             let hand;
             if (player.id === this.injectedSceneProperties.player_id) {
@@ -170,52 +186,77 @@ export class Game extends Scene {
                 return [player.id, index];
             }
         }
-        return ['', -1];
+        return [null, -1];
     }
 
 
     renderGameState(state: IGameState) {
         // 0 being falsy is intentional here
         if (state.deck?.cards?.length) {
-            this.gameObjects.deck = this.add.image(
+            this.gameObjects.deck = FaceDownCard(
+                this,
                 center(this.neutralAreaBound).x,
                 center(this.neutralAreaBound).y,
-                Images.card_back.key
+                Images.card_back,
+                this.clickableEventHandlers
             ).setScale(1.5)
         }
 
         if (this.getThisPlayerState(state)) {
             const player = this.getThisPlayerState(state);
             if (player?.discard_pile?.cards?.length) {
-                const card = player.discard_pile.cards[player.discard_pile.cards.length - 1];
+                const card = player.discard_pile.cards[0];
                 this.gameObjects.discardPile = FaceUpCard(
                     this,
                     center(this.neutralAreaBound).x - 100,
                     center(this.neutralAreaBound).y,
                     Images.card_front,
                     card.rank.toString(),
-                    this.suitToColor(card.suit)
-                )
+                    this.suitToColor(card.suit),
+                    this.clickableEventHandlers,
+                ).setScale(0.75)
             }
-            this.gameObjects.poisonVial = this.add.image(
+            const poisonVial = this.add.image(
                 this.thisPlayerBound.left + 100,
                 center(this.thisPlayerBound).y,
                 Images.poison_vial.key
             )
+            poisonVial.addListener('pointerdown', () => {
+                this.poisonMode = !this.poisonMode;
+                if (this.poisonMode) {
+                    poisonVial.setTint(0x0F8E01);
+                } else {
+                    poisonVial.clearTint();
+                }
+            })
+            poisonVial.addListener('pointerout', () => {
+                if (this.poisonMode) {
+                    poisonVial.setTint(0x0F8E01);
+                } else {
+                    poisonVial.clearTint();
+                }
+            })
+            poisonVial.addListener('pointerover', () => {
+                poisonVial.setTint(0xdddddd);
+            })
+
+            poisonVial.setInteractive();
+            this.gameObjects.poisonVial = poisonVial;
         }
 
         if (this.getOpponentPlayerState(state)) {
             const opponent = this.getOpponentPlayerState(state);
             if (opponent?.discard_pile?.cards?.length) {
-                const card = opponent.discard_pile.cards[opponent.discard_pile.cards.length - 1];
+                const card = opponent.discard_pile.cards[0];
                 this.gameObjects.discardPile = FaceUpCard(
                     this,
                     center(this.neutralAreaBound).x - 100,
                     center(this.neutralAreaBound).y,
                     Images.card_front,
                     card.rank.toString(),
-                    this.suitToColor(card.suit)
-                )
+                    this.suitToColor(card.suit),
+                    this.clickableEventHandlers
+                ).setScale(0.75)
             }
 
             this.gameObjects.opponentFace = this.add.image(
@@ -224,7 +265,7 @@ export class Game extends Scene {
                 Images.bandit.key
             ).setScale(1.25)
         } else {
-            this.add.text(
+            this.gameObjects.codeText = this.add.text(
                 center(this.opponentPlayerBound).x,
                 center(this.opponentPlayerBound).y,
                 `Send this game code to your friend!: ${this.injectedSceneProperties.game_id}`,
@@ -249,7 +290,8 @@ export class Game extends Scene {
                         this.thisPlayerBound.bottom - 100,
                         Images.card_front,
                         hand.cards[i].rank.toString(),
-                        this.suitToColor(hand.cards[i].suit)
+                        this.suitToColor(hand.cards[i].suit),
+                        this.clickableEventHandlers
                     )
                     this.gameObjects.cards.push(card);
                 }
@@ -268,7 +310,8 @@ export class Game extends Scene {
                         this,
                         startX + i * spacing,
                         this.opponentPlayerBound.top + 100,
-                        Images.card_back
+                        Images.card_back,
+                        this.clickableEventHandlers
                     )
                     this.gameObjects.opponentCards.push(card);
                 }
@@ -276,12 +319,102 @@ export class Game extends Scene {
         }
     }
 
+    // utility, tells objects to only be highlightable if they map to a legal action
+    handleHover(obj: IHasImage) {
+        if (this.mapToAction(obj)) {
+            if (this.poisonMode) {
+                // green hue
+                obj.image.setTint(0x0F8E01);
+            } else {
+                // light gray hue
+                obj.image.setTint(0xdddddd);
+            }
+
+        }
+    }
+
+    async handleClick(obj: any) {
+        const action = this.mapToAction(obj);
+        if (action) {
+            this.setWaiting(true)
+            console.log("Performing action:", action);
+            performAction(
+                this.injectedSceneProperties.api_client,
+                this.injectedSceneProperties.player_id!,
+                this.injectedSceneProperties.game_id!,
+                action
+            );
+        }
+    }
+
+    setWaiting(waiting: boolean) {
+        (waiting as any) = !!waiting;
+        // for (const obj of Object.values(this.gameObjects)) {
+        //     if (obj) {
+        //         if (Array.isArray(obj)) {
+        //             for (const o of obj) {
+        //                 if (waiting) {
+        //                     o.disableInteractive()
+        //                 } else {
+        //                     o.setInteractive()
+        //                 }
+        //             }
+        //         }
+        //         else {
+        //             if (waiting) {
+        //                 obj.disableInteractive();
+        //             } else {
+        //                 obj.setInteractive();
+        //             }
+        //         }
+        //     }
+        // }
+    }
+
+    mapToAction(gameObject: any): IPlayerAction | null {
+        const [player_id, card_order] = this.findCardOrderAndPlayerId(gameObject);
+        for (const action of this.legalActions) {
+            if (this.poisonMode && action.type === "protect") {
+                if (action.object_to_protect.type === "card" && player_id === action.object_to_protect.player_id && card_order === action.object_to_protect.card_order) {
+                    return action;
+                } else if (action.object_to_protect.type === "deck" && gameObject === this.gameObjects.deck) {
+                    return action;
+                } else if (action.object_to_protect.type === "discard" && player_id === action.object_to_protect.player_id && gameObject === this.gameObjects.discardPile) {
+                    return action;
+                }
+            } else if (!this.poisonMode && action.type === "discard") {
+                if (action.card_order === card_order) {
+                    return action;
+                }
+            } else if (!this.poisonMode && action.type === "take") {
+                if (action.object_to_take.type === "deck" && gameObject === this.gameObjects.deck) {
+                    return action;
+                } else if (action.object_to_take.type === "discard" && player_id === action.object_to_take.player_id && gameObject === this.gameObjects.discardPile) {
+                    return action;
+                } else if (action.object_to_take.type === "wager" && player_id === action.object_to_take.player_id && gameObject === this.gameObjects.wager) {
+                    return action;
+                } else if (action.object_to_take.type === "card" && player_id === action.object_to_take.player_id && card_order === action.object_to_take.card_order) {
+                    return action;
+                }
+            }
+        }
+        return null;
+    }
+
     create() {
         EventBus.emit('scene-created', this);
         this.add.image(this.width / 2, this.height / 2, Images.background.key)
         EventBus.on('game-state-updated', (new_state: IGameState) => {
+            this.gameState = new_state;
+            if (this.getThisPlayerState(new_state)?.eliminated) {
+                alert("Oops! They poisoned the thing you tried to take! You lose!");
+                this.injectedSceneProperties.navigate("/");
+                return;
+
+            }
             this.destroyOldGameObjects();
             this.renderGameState(new_state);
+            this.setWaiting(new_state.players.length !== 2);
         });
         EventBus.on('legal-actions-updated', (legal_actions: IPlayerAction[]) => {
             this.legalActions = legal_actions;

@@ -11,6 +11,7 @@ export const FaceDownCard = (scene: Scene, x: number, y: number, image: ImageAss
     const cardImage = scene.add.image(0, 0, image.key);
     card.add(cardImage)
     card.image = cardImage;
+    cardImage.setInteractive()
     for (const event_name in event_map) {
         const callback = event_map[event_name];
         cardImage.on(event_name, () => {

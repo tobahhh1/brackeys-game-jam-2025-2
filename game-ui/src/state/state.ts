@@ -46,9 +46,16 @@ export interface IGameState {
     deck: IDeck;
 }
 
+export type ITakeableObject =
+    | { type: "deck" }
+    | { type: "card"; player_id: string; card_order: number }
+    | { type: "discard"; player_id: string }
+    | { type: "wager"; player_id: string; amount: number };
+
+
 export type IPlayerAction =
-    | { type: "take"; object_to_take: any }
-    | { type: "protect"; object_to_protect: any }
+    | { type: "take"; object_to_take: ITakeableObject }
+    | { type: "protect"; object_to_protect: ITakeableObject }
     | { type: "discard"; card_order: number };
 
 export interface IGameAction {
