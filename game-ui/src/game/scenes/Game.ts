@@ -202,8 +202,8 @@ export class Game extends Scene {
             ).setScale(1.5)
         }
 
-        if (this.getThisPlayerState(state)) {
-            const player = this.getThisPlayerState(state);
+        const player = this.getThisPlayerState(state);
+        if (player) {
             if (player?.discard_pile?.cards?.length) {
                 const card = player.discard_pile.cards[0];
                 this.gameObjects.discardPile = FaceUpCard(
@@ -248,9 +248,9 @@ export class Game extends Scene {
             const opponent = this.getOpponentPlayerState(state);
             if (opponent?.discard_pile?.cards?.length) {
                 const card = opponent.discard_pile.cards[0];
-                this.gameObjects.discardPile = FaceUpCard(
+                this.gameObjects.opponentDiscardPile = FaceUpCard(
                     this,
-                    center(this.neutralAreaBound).x - 100,
+                    center(this.neutralAreaBound).x + 100,
                     center(this.neutralAreaBound).y,
                     Images.card_front,
                     card.rank.toString(),
@@ -373,14 +373,20 @@ export class Game extends Scene {
 
     mapToAction(gameObject: any): IPlayerAction | null {
         const [player_id, card_order] = this.findCardOrderAndPlayerId(gameObject);
+        const this_player_id = this.injectedSceneProperties.player_id;
+        const opponent_player_id = this.getOpponentPlayerState(this.gameState)?.id!;
         for (const action of this.legalActions) {
             if (this.poisonMode && action.type === "protect") {
                 if (action.object_to_protect.type === "card" && player_id === action.object_to_protect.player_id && card_order === action.object_to_protect.card_order) {
                     return action;
                 } else if (action.object_to_protect.type === "deck" && gameObject === this.gameObjects.deck) {
                     return action;
-                } else if (action.object_to_protect.type === "discard" && player_id === action.object_to_protect.player_id && gameObject === this.gameObjects.discardPile) {
-                    return action;
+                } else if (action.object_to_protect.type === "discard") {
+                    if (action.object_to_protect.player_id === this_player_id && gameObject === this.gameObjects.discardPile) {
+                        return action;
+                    } else if (action.object_to_protect.player_id === opponent_player_id && gameObject === this.gameObjects.opponentDiscardPile) {
+                        return action;
+                    }
                 }
             } else if (!this.poisonMode && action.type === "discard") {
                 if (action.card_order === card_order) {
@@ -389,8 +395,12 @@ export class Game extends Scene {
             } else if (!this.poisonMode && action.type === "take") {
                 if (action.object_to_take.type === "deck" && gameObject === this.gameObjects.deck) {
                     return action;
-                } else if (action.object_to_take.type === "discard" && player_id === action.object_to_take.player_id && gameObject === this.gameObjects.discardPile) {
-                    return action;
+                } else if (action.object_to_take.type === "discard") {
+                    if (action.object_to_take.player_id === this_player_id && gameObject === this.gameObjects.discardPile) {
+                        return action;
+                    } else if (action.object_to_take.player_id === opponent_player_id && gameObject === this.gameObjects.opponentDiscardPile) {
+                        return action;
+                    }
                 } else if (action.object_to_take.type === "wager" && player_id === action.object_to_take.player_id && gameObject === this.gameObjects.wager) {
                     return action;
                 } else if (action.object_to_take.type === "card" && player_id === action.object_to_take.player_id && card_order === action.object_to_take.card_order) {

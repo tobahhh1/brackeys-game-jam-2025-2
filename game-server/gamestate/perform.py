@@ -151,7 +151,7 @@ def perform_take(state: GameState, player_id: str, action: TakeAction) -> set[Ga
         if target_player.hand.protected or target_player.hand.cards[action.object_to_take.card_order].protected:
             return {eliminate_player(state, player_id)}
         if target_player.hand.cards[action.object_to_take.card_order]._gone:
-            return {state} # Card has already been taken this round, so nothing happens
+            raise ValueError(f"Player {target_player.id}'s card at order {action.object_to_take.card_order} has already been taken or discarded")
         return {
             replace(state,
                 players=tuple(

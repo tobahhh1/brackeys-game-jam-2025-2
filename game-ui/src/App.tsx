@@ -77,8 +77,8 @@ function App() {
 
             console.debug("Fetched updated game state:", updated_game_state);
             console.debug("Fetched updated legal actions:", updated_legal_actions);
-            EventBus.emit('legal-actions-updated', updated_legal_actions);
             EventBus.emit('game-state-updated', updated_game_state.state);
+            EventBus.emit('legal-actions-updated', updated_legal_actions);
         })
     }
 
