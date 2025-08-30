@@ -100,7 +100,7 @@ export class Game extends Scene {
     }
 
     preload() {
-        this.load.setPath('/assets');
+        this.load.setPath('assets');
 
         this.width = this.sys.game.config.width as number;
         this.height = this.sys.game.config.height as number;

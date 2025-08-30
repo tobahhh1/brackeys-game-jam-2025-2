@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { IRefPhaserGame, PhaserGame } from './PhaserGame';
 import { Route, Routes, useNavigate } from 'react-router';
 import { apiClient } from './api/client';
@@ -11,6 +11,10 @@ import { EventBus } from './game/EventBus';
 
 
 function App() {
+
+    useEffect(() => {
+        console.log("Current URL:", window.location.href);
+    })
 
     //  References to the PhaserGame component (game and scene are exposed)
     const phaserRef = useRef<IRefPhaserGame | null>(null);
