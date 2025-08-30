@@ -138,3 +138,7 @@ async def perform_action(player_id: str, game_id: str, action: PlayerAction):
             asyncio.create_task(player_id_to_event_queue[player.id].put(
                 ActionPerformedEvent(action=game_action, game_id=game_id)
             ))
+
+@app.get("/")
+async def root():
+    return {"message": "Hello World"}
